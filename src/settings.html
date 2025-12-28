@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Razer Battery – Settings</title>
+
+  <style>
+    body {
+      background: #0f1115;
+      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 24px;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    button {
+      background: #1b7f3a;
+      border: none;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    button:hover {
+      background: #239b4a;
+    }
+
+    #devices {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #151922;
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .left input[type="radio"] {
+      margin: 0;
+    }
+
+    .name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+    }
+
+    .meta {
+      font-size: 11px;
+      color: #9aa0aa;
+    }
+
+    .badge {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: #333;
+      white-space: nowrap;
+    }
+
+    .badge.ok {
+      background: #1b7f3a;
+    }
+
+    .badge.connected {
+      background: #555;
+    }
+
+    .badge.no-battery {
+      background: #444;
+    }
+
+    .badge.disconnected {
+      background: #7f1b1b;
+    }
+
+    input[type="radio"][disabled] {
+      cursor: not-allowed;
+    }
+
+    input[type="radio"][disabled] + div {
+      opacity: 0.5;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Settings</h1>
+  <label style="
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  cursor: pointer;
+">
+  <input type="checkbox" id="autostart" />
+  Start with Windows
+</label>
+
+  <button id="refresh-btn">Refresh devices</button>
+
+  <div id="devices"></div>
+
+  <script>
+    const devicesEl = document.getElementById('devices');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const autostartCheckbox = document.getElementById('autostart');
+
+    async function loadAutostart() {
+      const enabled = await window.api.invoke('settings:getAutoStart');
+      autostartCheckbox.checked = enabled;
+    }
+    autostartCheckbox.addEventListener('change', async () => {
+      await window.api.invoke(
+        'settings:setAutoStart',
+        autostartCheckbox.checked
+      );
+    });
+
+    async function loadDevices() {
+      const { devices, activeKey } = await window.api.invoke('devices:list');
+      devicesEl.innerHTML = '';
+
+      for (const device of devices) {
+        const wrap = document.createElement('div');
+        wrap.className = 'item';
+
+        const left = document.createElement('div');
+        left.className = 'left';
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'active-device';
+        radio.value = device.key;
+        radio.checked = device.key === activeKey;
+        radio.disabled = !device.hasBattery;
+
+        radio.addEventListener('change', async () => {
+          if (radio.checked) {
+            await window.api.invoke('devices:setActive', device.key);
+            loadDevices();
+          }
+        });
+
+        const textWrap = document.createElement('div');
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'name';
+        nameEl.textContent = device.productName || 'Razer Device';
+
+        const metaEl = document.createElement('div');
+        metaEl.className = 'meta';
+        metaEl.textContent =
+          `VID 0x${device.vendorId.toString(16).padStart(4, '0')} · ` +
+          `PID 0x${device.productId.toString(16).padStart(4, '0')}`;
+
+        textWrap.appendChild(nameEl);
+        textWrap.appendChild(metaEl);
+
+        left.appendChild(radio);
+        left.appendChild(textWrap);
+
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = '…';
+
+        wrap.appendChild(left);
+        wrap.appendChild(badge);
+        devicesEl.appendChild(wrap);
+
+        const status = await window.api.invoke(
+          'devices:batteryStatus',
+          device.key
+        );
+
+        badge.className = 'badge ' + status.status;
+
+        if (status.status === 'ok') {
+          badge.textContent = `${status.percent}%`;
+        } else {
+          badge.textContent = status.status;
+        }
+      }
+    }
+
+    refreshBtn.addEventListener('click', async () => {
+      await window.api.invoke('devices:refresh');
+      loadDevices();
+    });
+
+    loadDevices();
+    loadAutostart();
+  </script>
+</body>
+</html>
