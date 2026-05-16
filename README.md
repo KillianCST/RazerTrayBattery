@@ -22,6 +22,8 @@ Compared with the original project, this branch adds:
 * A refreshed tray icon set with 0-100 battery fill levels, red/yellow/green battery states, and a charging icon
 * A simple Windows installer build command through `npm run make:win`
 
+![Battery tray icon preview](docs/battery-icons-preview.png)
+
 
 ![image](https://i.imgur.com/sjW2C9r.png)
 ![image](https://i.imgur.com/Us3P6hk.png)
