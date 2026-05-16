@@ -87,8 +87,8 @@
       background: #1b7f3a;
     }
 
-    .badge.connected {
-      background: #555;
+    .badge.charging {
+      background: #263f52;
     }
 
     .badge.no-battery {
@@ -201,8 +201,8 @@
 
         badge.className = 'badge ' + status.status;
 
-        if (status.status === 'ok') {
-          badge.textContent = `${status.percent}%`;
+        if (status.status === 'ok' || (status.status === 'charging' && status.percent != null)) {
+          badge.textContent = `${status.percent}%${status.status === 'charging' ? ' charging' : ''}`;
         } else {
           badge.textContent = status.status;
         }
